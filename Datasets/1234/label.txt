@@ -1,0 +1,1 @@
+a classification label, with possible values including sadness (0), joy (1), love (2), anger (3), fear (4).
