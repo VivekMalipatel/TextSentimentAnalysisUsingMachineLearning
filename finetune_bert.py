@@ -4,12 +4,14 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import BertModel, BertTokenizer, BertConfig, DataCollatorWithPadding
 from torch import cuda
 import ast
+import numpy as np
+from sklearn import metrics
 import warnings
 warnings.filterwarnings('ignore')
 
 class Config:
     MAX_LEN = 512
-    TRAIN_BATCH_SIZE = 4
+    TRAIN_BATCH_SIZE = 16
     VALID_BATCH_SIZE = 4
     EPOCHS = 1
     LEARNING_RATE = 1e-5
@@ -39,25 +41,21 @@ class EmailDatasetPreprocessor:
 
 class TriageDataset(Dataset):
     def __init__(self, dataframe, tokenizer, max_len):
-        self.len = len(dataframe)
         self.data = dataframe
         self.tokenizer = tokenizer
         self.max_len = max_len
         
     def __getitem__(self, index):
-        body = str(self.data.text[index])
-        body = " ".join(body.split())
-        data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
+        text = str(self.data.text[index])
+        text = " ".join(text.split())
         inputs = self.tokenizer.encode_plus(
-            body,
+            text,
             None,
             add_special_tokens=True,
             max_length=self.max_len,
             pad_to_max_length=True,
-            return_token_type_ids=True,
-            truncation=True
+            return_token_type_ids=True
         )
-        inputs = data_collator(inputs)
         ids = inputs['input_ids']
         mask = inputs['attention_mask']
         token_type_ids = inputs["token_type_ids"]
@@ -66,28 +64,23 @@ class TriageDataset(Dataset):
             'ids': torch.tensor(ids, dtype=torch.long),
             'mask': torch.tensor(mask, dtype=torch.long),
             'token_type_ids': torch.tensor(token_type_ids, dtype=torch.long),
-            'targets': torch.tensor(self.data.labels[index], dtype=torch.long)
+            'targets': torch.tensor(self.data.labels[index], dtype=torch.float)
         } 
     
     def __len__(self):
-        return self.len
+        return len(self.data.text)
 
 class BERTClassifier(torch.nn.Module):
     def __init__(self):
         super(BERTClassifier, self).__init__()
         self.l1 = BertModel.from_pretrained(Config.BERT_PATH)
-        self.pre_classifier = torch.nn.Linear(768, 768)
-        self.dropout = torch.nn.Dropout(0.1)
-        self.classifier = torch.nn.Linear(768, 28)
+        self.l2 = torch.nn.Dropout(0.3)
+        self.l3 = torch.nn.Linear(768, 28)
 
     def forward(self, input_ids, attention_mask, token_type_ids):
-        output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids = token_type_ids, return_dict=False)
-        hidden_state = output_1[0]
-        pooler = hidden_state[:, 0]
-        pooler = self.pre_classifier(pooler)
-        pooler = torch.nn.ReLU()(pooler)
-        pooler = self.dropout(pooler)
-        output = self.classifier(pooler)
+        _, output_1= self.l1(input_ids, attention_mask = attention_mask, token_type_ids = token_type_ids, return_dict=False)
+        output_2 = self.l2(output_1)
+        output = self.l3(output_2)
         return output
 
 class Trainer:
@@ -96,7 +89,7 @@ class Trainer:
         self.training_loader = training_loader
         self.testing_loader = testing_loader
         self.optimizer = torch.optim.Adam(params=model.parameters(), lr=Config.LEARNING_RATE)
-        self.loss_function = torch.nn.CrossEntropyLoss()
+        self.loss_function = torch.nn.BCEWithLogitsLoss()
         self.tokenizer = tokenizer
 
     def calcuate_accu(self, big_idx, targets):
@@ -104,42 +97,23 @@ class Trainer:
         return n_correct
 
     def train_epoch(self, epoch):
-        tr_loss, n_correct, nb_tr_steps, nb_tr_examples = 0, 0, 0, 0
         self.model.train()
         for _, data in enumerate(self.training_loader, 0):
             ids = data['ids'].to(Config.device, dtype=torch.long)
             mask = data['mask'].to(Config.device, dtype=torch.long)
             token_type_ids = data['token_type_ids'].to(Config.device, dtype=torch.long)
-            targets = data['targets'].to(Config.device, dtype=torch.long)
-
-            outputs = self.model(ids, mask, token_type_ids)
-            loss = self.loss_function(outputs, targets)
-            tr_loss += loss.item()
-            big_val, big_idx = torch.max(outputs.data, dim=1)
-            n_correct += self.calcuate_accu(big_idx, targets)
-
-            nb_tr_steps += 1
-            nb_tr_examples += targets.size(0)
+            targets = data['targets'].to(Config.device, dtype=torch.float)
             
+            outputs = self.model(ids, mask, token_type_ids)
+            self.optimizer.zero_grad()
+            loss = self.loss_function(outputs, targets)
 
             if _ % 500 == 0:
-                loss_step = tr_loss / nb_tr_steps
-                accu_step = (n_correct * 100) / nb_tr_examples 
-                print(f"Training Loss per 500 steps: {loss_step}")
-                print(f"Training Accuracy per 500 steps: {accu_step}")
-                print()
+                print(f'Epoch: {epoch}, Loss:  {loss.item()}')
             
-
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-
-        print(f'The Total Accuracy for Epoch {epoch}: {(n_correct * 100) / nb_tr_examples}')
-        epoch_loss = tr_loss / nb_tr_steps
-        epoch_accu = (n_correct * 100) / nb_tr_examples
-        print(f"Training Loss Epoch: {epoch_loss}")
-        print(f"Training Accuracy Epoch: {epoch_accu}")
-        print()
 
     def train(self):
         loss= None
@@ -167,31 +141,33 @@ class Validator:
     def __init__(self, model, testing_loader):
         self.model = model
         self.testing_loader = testing_loader
-        self.loss_function = torch.nn.CrossEntropyLoss()
+        self.loss_function = torch.nn.BCEWithLogitsLoss()
     
-    def validate(self):
+    def validation(self, epoch):
         self.model.eval()
-        tr_loss, n_correct, nb_tr_steps, nb_tr_examples = 0, 0, 0, 0
+        fin_targets=[]
+        fin_outputs=[]
         with torch.no_grad():
             for _, data in enumerate(self.testing_loader, 0):
                 ids = data['ids'].to(Config.device, dtype=torch.long)
                 mask = data['mask'].to(Config.device, dtype=torch.long)
                 token_type_ids = data['token_type_ids'].to(Config.device, dtype=torch.long)
-                targets = data['targets'].to(Config.device, dtype=torch.long)
-                outputs = self.model(ids, mask, token_type_ids).squeeze()
-                loss = self.loss_function(outputs, targets)
-                tr_loss += loss.item()
-                big_val, big_idx = torch.max(outputs.data, dim=1)
-                n_correct += (big_idx == targets).sum().item()
+                targets = data['targets'].to(Config.device, dtype=torch.float)
+                outputs = model(ids, mask, token_type_ids)
+                fin_targets.extend(targets.cpu().detach().numpy().tolist())
+                fin_outputs.extend(torch.sigmoid(outputs).cpu().detach().numpy().tolist())
+        return fin_outputs, fin_targets
 
-                nb_tr_steps += 1
-                nb_tr_examples += targets.size(0)
-
-        epoch_loss = tr_loss / nb_tr_steps
-        epoch_accu = (n_correct * 100) / nb_tr_examples
-        print(f"Validation Loss: {epoch_loss}")
-        print(f"Validation Accuracy: {epoch_accu}%")
-        return epoch_accu
+    def validate(self):
+        for epoch in range(Config.EPOCHS):
+            outputs, targets = self.validate(epoch)
+            outputs = np.array(outputs) >= 0.5
+            accuracy = metrics.accuracy_score(targets, outputs)
+            f1_score_micro = metrics.f1_score(targets, outputs, average='micro')
+            f1_score_macro = metrics.f1_score(targets, outputs, average='macro')
+            print(f"Accuracy Score = {accuracy}")
+            print(f"F1 Score (Micro) = {f1_score_micro}")
+            print(f"F1 Score (Macro) = {f1_score_macro}")
 
 if __name__ == "__main__":
     preprocessor = EmailDatasetPreprocessor(Config.FILE_PATH)
@@ -201,6 +177,10 @@ if __name__ == "__main__":
     train_dataset = df.sample(frac=train_size, random_state=200).reset_index(drop=True)
     test_dataset = df.drop(train_dataset.index).reset_index(drop=True)
     
+    print("FULL Dataset: {}".format(df.shape))
+    print("TRAIN Dataset: {}".format(train_dataset.shape))
+    print("TEST Dataset: {}".format(test_dataset.shape))
+
     tokenizer = BertTokenizer.from_pretrained(Config.BERT_PATH)
     
     training_set = TriageDataset(train_dataset, tokenizer, Config.MAX_LEN)
@@ -218,8 +198,6 @@ if __name__ == "__main__":
 
     trainer.train()
 
-    '''
     validator = Validator(model, testing_loader)
     validator.validate()
-    '''
 
