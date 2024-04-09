@@ -1,19 +1,14 @@
-import pandas as pd
+import csv
 
-dataset_path = 'go_emotions_pre_processed.csv'
-data = pd.read_csv(dataset_path)
+file_path = 'go_emotions_pre_processed.csv'
+output_file_path_direct = 'Converted_Dataset.csv'
 
-emotion_labels = data.columns[2:]
-
-# Function to concatenate emotion labels present in each text (where value is 1)
-def concatenate_labels(row):
-    labels = [label for label in emotion_labels if row[label] == 1]
-    return ", ".join(labels) if labels else "neutral"  # Default to "neutral" if no labels are present
-
-# Apply the function to each row
-data['labels'] = data.apply(concatenate_labels, axis=1)
-
-# Select only the text and concatenated labels columns for the final output
-final_data = data[['text', 'labels']]
-
-final_data.to_csv('Converted_Dataset.csv')
+with open(file_path, 'r', newline='') as input_csvfile, open(output_file_path_direct, 'w', newline='') as output_csvfile:
+    reader = csv.DictReader(input_csvfile)
+    writer = csv.writer(output_csvfile)
+    # Writing the header for the new file
+    writer.writerow(['text', 'labels'])
+    for row in reader:
+        text = row['text']
+        emotions = [int(row[emotion]) for emotion in reader.fieldnames[2:]]  # Skip 'id' and 'text'
+        writer.writerow([text, emotions])
