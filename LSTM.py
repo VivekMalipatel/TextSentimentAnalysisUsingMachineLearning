@@ -11,7 +11,7 @@ from collections import Counter
 from torchtext.vocab import vocab
 
 # Set device
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cuda:5' if torch.cuda.is_available() else torch.device("mps")
 
 # Model definition
 class LSTMModel(nn.Module):
@@ -92,6 +92,8 @@ def main():
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = Adam(model.parameters(), lr=0.001)
+
+    print("training model...")
 
     # Train the model
     num_epochs = 5
