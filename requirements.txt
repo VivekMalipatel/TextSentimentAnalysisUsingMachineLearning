@@ -3,3 +3,6 @@ pandas
 matplotlib
 nltk
 joblib
+torchtext
+wordcloud
+seaborn
