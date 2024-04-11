@@ -12,14 +12,15 @@ warnings.filterwarnings('ignore')
 class Config:
     MAX_LEN = 512
     TRAIN_BATCH_SIZE = 16
-    VALID_BATCH_SIZE = 4
-    EPOCHS = 1
+    VALID_BATCH_SIZE = 32
+    EPOCHS = 3
     LEARNING_RATE = 1e-5
     BERT_PATH = 'bert-base-multilingual-cased'
+    TEMP_PATH = 'temp_finetuned'
     FILE_PATH = 'Converted_Dataset.csv'
     MODEL_FOLDER = "bert_finetuned"
-    MODEL_PATH = 'bert_finetuned/pytorch_model.bin'
-    VOCAB_PATH = 'bert_finetuned/vocab.txt'
+    MODEL_NAME = 'pytorch_model.bin'
+    VOCAB_NAME = 'vocab.txt'
     device = 'cuda:5' if cuda.is_available() else 'cpu'
 
 class EmailDatasetPreprocessor:
@@ -108,8 +109,9 @@ class Trainer:
             self.optimizer.zero_grad()
             loss = self.loss_function(outputs, targets)
 
-            if _ % 500 == 0:
+            if _ % 5000 == 0:
                 print(f'Epoch: {epoch}, Loss:  {loss.item()}')
+                self.save_model(True)
             
             self.optimizer.zero_grad()
             loss.backward()
@@ -121,21 +123,27 @@ class Trainer:
             self.train_epoch(epoch)
         self.save_model()
 
-    def save_model(self):
+    def save_model(self, temp = False):
+        
+        save_path = Config.MODEL_FOLDER
+        if temp:
+            save_path = Config.TEMP_PATH
+
         config = BertConfig.from_pretrained(Config.BERT_PATH)
         config.num_labels=28
         config.architectures = "BertForForSequenceClassification"
         config.label2id = {'admiration':0, 'amusement':1, 'anger':2, 'annoyance':3, 'approval':4, 'caring':5, 'confusion':6, 'curiosity':7, 'desire':8, 'disappointment':9, 'disapproval':10, 'disgust':11, 'embarrassment':12, 'excitement':13, 'fear':14, 'gratitude':15, 'grief':16, 'joy':17, 'love':18, 'nervousness':19, 'optimism':20, 'pride':21, 'realization':22, 'relief':23, 'remorse':24, 'sadness':25, 'surprise':26, 'neutral':27}
         config.id2label = {0: 'admiration', 1: 'amusement', 2: 'anger', 3: 'annoyance', 4: 'approval', 5: 'caring', 6: 'confusion', 7: 'curiosity', 8: 'desire', 9: 'disappointment', 10: 'disapproval', 11: 'disgust', 12: 'embarrassment', 13: 'excitement', 14: 'fear', 15: 'gratitude', 16: 'grief', 17: 'joy', 18: 'love', 19: 'nervousness', 20: 'optimism', 21: 'pride', 22: 'realization', 23: 'relief', 24: 'remorse', 25: 'sadness', 26: 'surprise', 27: 'neutral'}
-        config.save_pretrained(Config.MODEL_FOLDER)
+        config.save_pretrained(save_path)
         self.model.eval()
         torch.save({
         'model_state_dict': self.model.state_dict(),
         'optimizer_state_dict': self.optimizer.state_dict()
-        }, Config.MODEL_PATH, _use_new_zipfile_serialization=False)
+        }, save_path+'/'+Config.MODEL_NAME, _use_new_zipfile_serialization=False)
         #self.tokenizer.save_vocabulary(Config.VOCAB_PATH)
-        self.tokenizer.save_pretrained(Config.MODEL_FOLDER)
-        print('Model and tokenizer have been saved.')
+        self.tokenizer.save_pretrained(save_path)
+        if not temp:
+            print('Model and tokenizer have been saved.')
 
 class Validator:
     def __init__(self, model, testing_loader):
@@ -160,7 +168,7 @@ class Validator:
 
     def validate(self):
         for epoch in range(Config.EPOCHS):
-            outputs, targets = self.validate(epoch)
+            outputs, targets = self.validation(epoch)
             outputs = np.array(outputs) >= 0.5
             accuracy = metrics.accuracy_score(targets, outputs)
             f1_score_micro = metrics.f1_score(targets, outputs, average='micro')
@@ -193,11 +201,10 @@ if __name__ == "__main__":
     testing_loader = DataLoader(testing_set, **test_params)
 
     model = BERTClassifier().to(Config.device)
-    
+
     trainer = Trainer(model, training_loader, testing_loader, tokenizer)
 
     trainer.train()
 
     validator = Validator(model, testing_loader)
     validator.validate()
-
