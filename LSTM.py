@@ -97,6 +97,7 @@ def main():
 
     # Train the model
     num_epochs = 5
+    steps = 0
     for epoch in range(num_epochs):
         model.train()
         for texts, labels in train_loader:
@@ -106,7 +107,10 @@ def main():
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-        print(f'Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}')
+            steps += 1
+            if steps % 5000 == 0:
+                print(f'Step {steps}, Loss: {loss.item():.4f}')
+    print("Training completed.")
 
     # Evaluate the model
     test_loss, test_accuracy, test_precision, test_recall, test_f1 = evaluate(model, test_loader, criterion, device)
