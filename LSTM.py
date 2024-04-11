@@ -1,46 +1,77 @@
-import tensorflow as tf
 import pandas as pd
+from keras.layers import TextVectorization, Embedding, Bidirectional, LSTM, Dense, Dropout
+from keras.models import Sequential
+from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
-from tensorflow.keras.layers import Embedding, LSTM, Dense
-from tensorflow.keras import Sequential
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
 
-# Adjust the path to your dataset
-dataset_path = 'go_emotions_pre_processed.csv'
-data = pd.read_csv(dataset_path)
+# Load your pre-processed dataset
+data_path = 'pre_processed_text.csv'
+data = pd.read_csv(data_path)
 
-# Assuming 'data' is your DataFrame and it's already loaded
-X = data['text'].values
-y = data.drop(['id', 'text'], axis=1).values
+# Prepare the text and labels
+texts = data['text'].values
+label_encoder = LabelEncoder()
+labels = label_encoder.fit_transform(data['label'])
+labels = to_categorical(labels)
 
-# Split the data into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Split data into training and testing
+X_train, X_test, y_train, y_test = train_test_split(texts, labels, test_size=0.2, random_state=42)
 
-max_features = 5000  # Number of words in the vocabulary
-max_length = 100  # Maximum length of a text sequence
+# Text Vectorization
+max_features = 10000
+sequence_length = 1000
 
 vectorize_layer = TextVectorization(
     max_tokens=max_features,
     output_mode='int',
-    output_sequence_length=max_length)
+    output_sequence_length=sequence_length)
 
-# Adapt the text vectorization layer to your text data
 vectorize_layer.adapt(X_train)
 
-# Define the model
+# Build the model
 model = Sequential([
     vectorize_layer,
-    Embedding(max_features, 64, input_length=max_length),
-    LSTM(64),
-    Dense(y.shape[1], activation='sigmoid')
+    Embedding(max_features + 1, 64, mask_zero=True),
+    Bidirectional(LSTM(64, return_sequences=True)),
+    Bidirectional(LSTM(32)),
+    Dense(64, activation='relu'),
+    Dropout(0.5),
+    Dense(y_train.shape[1], activation='softmax')
 ])
 
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+# Compile the model
+model.compile(loss='categorical_crossentropy',
+              optimizer='adam',
+              metrics=['accuracy'])
 
-# Model summary
-print(model.summary())
+# Train the model
+history = model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
 
-history = model.fit(X_train, y_train, batch_size=32, epochs=5, validation_split=0.2)
+# Evaluate the model
+test_loss, test_acc = model.evaluate(X_test, y_test)
+print(f'Test Loss: {test_loss}')
+print(f'Test Accuracy: {test_acc}')
 
-performance = model.evaluate(X_test, y_test)
-print(f'Test Loss: {performance[0]}, Test Accuracy: {performance[1]}')
+# Save the model
+model.save('LSTM')  # SavedModel format
+
+# Optional: save as HDF5
+model.save('LSTM/my_model.h5')  # HDF5 file
+
+# Function to plot graphs
+def plot_graphs(history, metric):
+    plt.plot(history.history[metric])
+    plt.plot(history.history['val_'+metric], '')
+    plt.xlabel("Epochs")
+    plt.ylabel(metric)
+    plt.legend([metric, 'val_'+metric])
+
+# Plot accuracy and loss
+plt.figure(figsize=(16, 6))
+plt.subplot(1, 2, 1)
+plot_graphs(history, 'accuracy')
+plt.subplot(1, 2, 2)
+plot_graphs(history, 'loss')
+plt.show()
