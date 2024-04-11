@@ -102,7 +102,6 @@ def main():
 
     # Train the model
     num_epochs = 50
-    steps = 0
     for epoch in range(num_epochs):
         model.train()
         for texts, labels in train_loader:
@@ -112,14 +111,11 @@ def main():
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-            steps += 1
-            if steps % 5000 == 0:
-                print(f'Step {steps}, Loss: {loss.item():.4f}')
         print(f'Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}')
     print("Training completed.")
 
     # Save the model and tokenizer
-    torch.save(model.state_dict(), 'LSTM/LSTM_model.pth')  # Note the use of `module` to save the original model
+    torch.save(model.state_dict(), 'LSTM/LSTM_model.pth')
     torch.save(my_vocab, 'LSTM/vocab.pth')
 
     # Evaluate the model
