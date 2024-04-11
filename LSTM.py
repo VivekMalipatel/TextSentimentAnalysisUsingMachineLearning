@@ -31,6 +31,7 @@ class LSTMModel(nn.Module):
 def evaluate(model, loader, criterion, device):
     model.eval()
     total_loss, total_accuracy, total_precision, total_recall, total_f1 = 0, 0, 0, 0, 0
+    num_batches = len(loader)
     with torch.no_grad():
         for texts, labels in loader:
             texts, labels = texts.to(device), labels.to(device)
@@ -38,12 +39,15 @@ def evaluate(model, loader, criterion, device):
             loss = criterion(outputs, labels)
             total_loss += loss.item()
             predictions = outputs.argmax(dim=1, keepdim=True).squeeze()
-            accuracy, (precision, recall, f1), _ = precision_recall_fscore_support(labels.cpu(), predictions.cpu(), average='macro')
+            accuracy = accuracy_score(labels.cpu(), predictions.cpu())
             total_accuracy += accuracy
+            precision, recall, f1, _ = precision_recall_fscore_support(labels.cpu(), predictions.cpu(), average='macro', zero_division=0)
             total_precision += precision
             total_recall += recall
             total_f1 += f1
-    return total_loss / len(loader), total_accuracy / len(loader), total_precision / len(loader), total_recall / len(loader), total_f1 / len(loader)
+
+    return total_loss / num_batches, total_accuracy / num_batches, total_precision / num_batches, total_recall / num_batches, total_f1 / num_batches
+
 
 def main():
     # Load the pre-processed dataset
@@ -75,9 +79,9 @@ def main():
 
     # Create data loaders
     train_data = TensorDataset(X_train, y_train)
-    train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
+    train_loader = DataLoader(train_data, batch_size=4096, shuffle=True)
     test_data = TensorDataset(X_test, y_test)
-    test_loader = DataLoader(test_data, batch_size=64, shuffle=False)
+    test_loader = DataLoader(test_data, batch_size=4096, shuffle=False)
 
     # Model parameters
     embedding_dim = 100
@@ -96,7 +100,7 @@ def main():
     print("training model...")
 
     # Train the model
-    num_epochs = 5
+    num_epochs = 50
     steps = 0
     for epoch in range(num_epochs):
         model.train()
@@ -110,15 +114,19 @@ def main():
             steps += 1
             if steps % 5000 == 0:
                 print(f'Step {steps}, Loss: {loss.item():.4f}')
+        print(f'Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}')
+        test_loss, test_accuracy, test_precision, test_recall, test_f1 = evaluate(model, test_loader, criterion, device)
+        print(f'Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}, Test Precision: {test_precision:.4f}, Test Recall: {test_recall:.4f}, Test F1 Score: {test_f1:.4f}')
     print("Training completed.")
-
-    # Evaluate the model
-    test_loss, test_accuracy, test_precision, test_recall, test_f1 = evaluate(model, test_loader, criterion, device)
-    print(f'Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}, Test Precision: {test_precision:.4f}, Test Recall: {test_recall:.4f}, Test F1 Score: {test_f1:.4f}')
 
     # Save the model and tokenizer
     torch.save(model.state_dict(), 'LSTM/LSTM_model.pth')
     torch.save(my_vocab, 'LSTM/vocab.pth')
+
+    # Evaluate the model
+    print("\n Final model evaluation metrics :")
+    test_loss, test_accuracy, test_precision, test_recall, test_f1 = evaluate(model, test_loader, criterion, device)
+    print(f'Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}, Test Precision: {test_precision:.4f}, Test Recall: {test_recall:.4f}, Test F1 Score: {test_f1:.4f}')
 
     print("Model and vocabulary have been saved.")
 
