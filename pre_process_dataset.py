@@ -3,7 +3,11 @@ import string
 import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
+from textblob import TextBlob
 import re
+from tqdm import tqdm
+tqdm.pandas()
+
 
 # Download necessary NLTK data
 nltk.download('omw-1.4')
@@ -38,6 +42,15 @@ def expand_contractions(text, contractions_dict=contractions_dict):
         return contractions_dict[match.group(0)]
     return contractions_re.sub(replace, text)
 
+def reduce_elongation(text):
+    # Pattern to reduce elongated words to two occurrences of the character
+    pattern = re.compile(r"(.)\1{2,}")
+    return pattern.sub(r"\1\1", text)
+
+def correct_spelling(text):
+    blob = TextBlob(text)
+    return str(blob.correct())
+
 # Function to convert NLTK's part of speech tags to wordnet tags
 def nltk_pos_to_wordnet_pos(nltk_pos):
     if nltk_pos.startswith('J'):
@@ -55,6 +68,8 @@ def nltk_pos_to_wordnet_pos(nltk_pos):
 def clean_and_lemmatize(text):
 
     text = expand_contractions(text)
+    text = reduce_elongation(text)
+    text = correct_spelling(text)
     # Convert text to lowercase
     text = text.lower()
     # Remove punctuation
@@ -90,8 +105,10 @@ def main():
     print("\nFirst 5 rows of the dataset:")
     print(data.head())
 
+    print("\n Cleaning Text :")
+
     # Apply cleaning and lemmatization to the text data
-    data['text'] = data['text'].apply(clean_and_lemmatize)
+    data['text'] = data['text'].progress_apply(clean_and_lemmatize)
 
     print("\nAfter Pre-processing and Lemmatization:")
     print(data.head())

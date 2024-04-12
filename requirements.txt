@@ -6,3 +6,4 @@ joblib
 torchtext
 wordcloud
 seaborn
+textblob
