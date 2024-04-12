@@ -1,3 +1,15 @@
 
 Datasets/.DS_Store
 .DS_Store
+1/bert_finetuned/config.json
+test.py
+1/temp_finetuned/vocab.txt
+1/temp_finetuned/tokenizer_config.json
+1/temp_finetuned/special_tokens_map.json
+1/temp_finetuned/pytorch_model.bin
+1/temp_finetuned/config.json
+1/bert_finetuned/vocab.txt
+1/bert_finetuned/tokenizer_config.json
+1/bert_finetuned/special_tokens_map.json
+1/bert_finetuned/pytorch_model.bin
+1/bert-base-multilingual-cased/
