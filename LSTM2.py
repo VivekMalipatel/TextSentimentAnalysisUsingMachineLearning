@@ -69,6 +69,13 @@ def main(rank, world_size):
     my_vocab = vocab(token_counts, min_freq=2)
     vocab_size = len(my_vocab)
 
+    # Describe vocab_size, token_counts, and sample of my_vocab
+    print("vocab_size:", vocab_size)
+    print("Number of unique tokens:", len(token_counts))
+    print("Sample of token_counts:", token_counts.most_common(10))
+    print("Sample of my_vocab:", list(my_vocab.stoi.items())[:10])
+    
+
     # Encode text and labels
     encoded_texts = [[my_vocab[word] for word in text.split() if word in my_vocab] for text in X]
     encoded_labels = y
@@ -77,8 +84,17 @@ def main(rank, world_size):
     text_tensor = [torch.tensor(x) for x in encoded_texts]
     label_tensor = torch.tensor(encoded_labels)
 
+    print("label_tensor shape:", label_tensor.size())
+    print("label_tensor dtype:", label_tensor.dtype)
+    print("label_tensor sample:", label_tensor[0])
+
     # Padding sequences to create uniform length
     padded_texts = pad_sequence(text_tensor, batch_first=True)
+
+    # Describe padded_texts
+    print("padded_texts shape:", padded_texts.size())
+    print("padded_texts dtype:", padded_texts.dtype)
+    print("padded_texts sample:", padded_texts[0])
 
     # Train test split
     X_train, X_test, y_train, y_test = train_test_split(padded_texts, label_tensor, test_size=0.2, random_state=42)
