@@ -83,6 +83,12 @@ def main(rank, world_size):
     # Train test split
     X_train, X_test, y_train, y_test = train_test_split(padded_texts, label_tensor, test_size=0.2, random_state=42)
 
+    # Describe X_train and X_test
+    print("X_train shape:", X_train.shape)
+    print("X_test shape:", X_test.shape)
+    print("X_train sample:", X_train[0])
+    print("X_test sample:", X_test[0])
+
     # Create data loaders
     train_sampler = DistributedSampler(TensorDataset(X_train, y_train), num_replicas=world_size, rank=rank)
     train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=128, shuffle=False, sampler=train_sampler)
