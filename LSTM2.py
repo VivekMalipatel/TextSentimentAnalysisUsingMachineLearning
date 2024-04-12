@@ -162,6 +162,9 @@ def main(rank, world_size):
     for epoch in range(num_epochs):
         model.train()
         train_sampler.set_epoch(epoch)
+        total_loss = 0
+        num_batches = 0
+
         for texts, labels in train_loader:
             texts, labels = texts.to(rank), labels.to(rank)
             optimizer.zero_grad()
@@ -169,8 +172,14 @@ def main(rank, world_size):
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+
+            total_loss += loss.item()
+            num_batches += 1
+
+        average_loss = total_loss / num_batches
+
         if rank == 0:
-            print(f'Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}')
+            print(f'Epoch {epoch+1}/{num_epochs}, Average Epoch Loss: {average_loss:.4f}')
                
 
     if rank == 0:
