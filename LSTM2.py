@@ -12,20 +12,44 @@ from torch.nn.utils.rnn import pad_sequence
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from collections import Counter
 from torchtext.vocab import vocab
+import torch.nn.functional as F
 import os
+
+class Attention(nn.Module):
+    def __init__(self, hidden_dim):
+        super(Attention, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.linear = nn.Linear(hidden_dim, 1, bias=False)
+
+    def forward(self, lstm_output, lengths):
+        # lstm_output is of shape [batch_size, seq_len, hidden_dim]
+        scores = self.linear(lstm_output).squeeze(2)  # [batch_size, seq_len]
+        max_len = max(lengths)
+        for i, length in enumerate(lengths):
+            if length < max_len:
+                scores[i, length:] = -1e9  # Large negative value for softmax
+        weights = F.softmax(scores, dim=1)
+        # Apply weights
+        weighted = torch.sum(lstm_output * weights.unsqueeze(2), dim=1)
+        return weighted, weights
 
 class LSTMModel(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, n_layers, dropout):
         super(LSTMModel, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=n_layers, batch_first=True, dropout=dropout)
+        self.attention = Attention(hidden_dim)
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, text, text_lengths):
         embedded = self.embedding(text)
         packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_lengths, batch_first=True, enforce_sorted=False)
         packed_output, (hidden, cell) = self.lstm(packed_embedded)
-        out = self.fc(hidden[-1])
+        # Unpack output
+        output, output_lengths = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
+        # Apply attention
+        attn_output, attn_weights = self.attention(output, text_lengths)
+        out = self.fc(attn_output)
         return out
 
 def ddp_setup(rank, world_size):
@@ -66,7 +90,8 @@ def main(rank, world_size):
 
     # Create a vocabulary
     token_counts = Counter(word for sentence in X for word in sentence.split())
-    my_vocab = vocab(token_counts, min_freq=2)
+    my_vocab = vocab(token_counts, specials=['<pad>'], min_freq=2)
+    my_vocab.set_default_index(my_vocab['<pad>'])
     vocab_size = len(my_vocab)
 
     if rank == 0:
@@ -80,7 +105,7 @@ def main(rank, world_size):
     encoded_labels = y
 
     # Create tensors
-    text_tensor = [torch.tensor(x) for x in encoded_texts]
+    text_tensor = [torch.tensor(x, dtype=torch.long) for x in encoded_texts]
     label_tensor = torch.tensor(encoded_labels)
     if rank == 0:
         # Describe text_tensor
@@ -89,7 +114,7 @@ def main(rank, world_size):
         print("text_tensor sample:", text_tensor[0])
 
     # Padding sequences to create uniform length
-    padded_texts = pad_sequence(text_tensor, batch_first=True)
+    padded_texts = pad_sequence(text_tensor, batch_first=True, padding_value=my_vocab['<pad>'])
 
     if rank == 0:
         # Describe padded_texts
@@ -122,6 +147,7 @@ def main(rank, world_size):
 
     # Initialize model
     model = LSTMModel(vocab_size, embedding_dim, hidden_dim, output_dim, n_layers, dropout).to(rank)
+    model.embedding.weight.data[my_vocab['<pad>']] = torch.zeros(embedding_dim)
     model = DDP(model, device_ids=[rank])
     
     # Loss and optimizer
