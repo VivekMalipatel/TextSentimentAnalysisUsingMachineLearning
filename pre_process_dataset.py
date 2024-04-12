@@ -3,7 +3,7 @@ import string
 import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet
-from sklearn.model_selection import train_test_split
+import re
 
 # Download necessary NLTK data
 nltk.download('omw-1.4')
@@ -12,6 +12,31 @@ nltk.download('averaged_perceptron_tagger')
 
 # Initialize the WordNet Lemmatizer
 lemmatizer = WordNetLemmatizer()
+
+# Define the dictionary for contractions
+contractions_dict = {
+    "ive": "I have",
+    "im": "I am",
+    "youre": "you are",
+    "were": "we are",
+    "theyre": "they are",
+    "cant": "cannot",
+    "couldnt": "could not",
+    "dont": "do not",
+    "doesnt": "does not",
+    "its": "it is",
+    "thats": "that is",
+    "theres": "there is",
+    # Add more contractions as needed
+}
+
+# Regular expression for finding contractions
+contractions_re = re.compile('(%s)' % '|'.join(contractions_dict.keys()))
+
+def expand_contractions(text, contractions_dict=contractions_dict):
+    def replace(match):
+        return contractions_dict[match.group(0)]
+    return contractions_re.sub(replace, text)
 
 # Function to convert NLTK's part of speech tags to wordnet tags
 def nltk_pos_to_wordnet_pos(nltk_pos):
@@ -28,6 +53,8 @@ def nltk_pos_to_wordnet_pos(nltk_pos):
 
 # Function to clean, lemmatize, and retain text as sentences
 def clean_and_lemmatize(text):
+
+    text = expand_contractions(text)
     # Convert text to lowercase
     text = text.lower()
     # Remove punctuation
