@@ -71,7 +71,7 @@ def main(rank, world_size):
 
     # Encode text and labels
     encoded_texts = [[my_vocab[word] for word in text.split() if word in my_vocab] for text in X]
-    encoded_labels = LabelEncoder().fit_transform(y)
+    encoded_labels = y
 
     # Create tensors
     text_tensor = [torch.tensor(x) for x in encoded_texts]
@@ -85,7 +85,7 @@ def main(rank, world_size):
 
     # Create data loaders
     train_sampler = DistributedSampler(TensorDataset(X_train, y_train), num_replicas=world_size, rank=rank)
-    train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=4096, shuffle=False, sampler=train_sampler)
+    train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=128, shuffle=False, sampler=train_sampler)
     test_sampler = DistributedSampler(TensorDataset(X_test, y_test), num_replicas=world_size, rank=rank)
     test_loader = DataLoader(TensorDataset(X_test, y_test), batch_size=4096, shuffle=False, sampler=test_sampler)
 
@@ -102,7 +102,7 @@ def main(rank, world_size):
     
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = Adam(model.parameters(), lr=0.001)
+    optimizer = Adam(model.parameters(), lr=0.00001)
 
     print("training model...")
 
