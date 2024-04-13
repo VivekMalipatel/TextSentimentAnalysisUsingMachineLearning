@@ -10,7 +10,7 @@ from sklearn.metrics import precision_recall_fscore_support, balanced_accuracy_s
 class Config:
 
     #Paths
-    INPUT_DATA_PATH = 'pre_processed_text.csv'
+    INPUT_DATA_PATH = 'Dataset/Training_dataset/pre_processed_text.csv'
     BASE_MODEL_PATH = 'LLM/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7'
     MODEL_TRAINING_LOGS_PATH = 'LLM/LLM_training_logs'
     FINETUNED_MODEL_SAVE_PATH = 'LLM/Finetuned_LLM_model_files'
@@ -41,7 +41,7 @@ class Config:
     MAX_LEN = 512
     TRAIN_BATCH_SIZE = 32
     VALID_BATCH_SIZE = 128
-    EPOCHS = 1
+    EPOCHS = 6
     LEARNING_RATE = 2e-5
     GRADIENT_ACCUMULATION_STEPS = 1
     WARMUP_RATIO = 0.06
@@ -167,24 +167,24 @@ class Train:
             compute_metrics = lambda eval_pred : Evaluate().compute_metrics_nli_binary(eval_pred)
         )
     
-    def save_model(self):# train_result):
+    def save_model(self, train_result):
         print("Saving model...")
         self.trainer.save_model(Config.FINETUNED_MODEL_SAVE_PATH)
         print(f"Model saved at {Config.FINETUNED_MODEL_SAVE_PATH}")
         print("Logging metrics...")
-        #metrics = train_result.metrics
-       # max_train_samples = self.train_args.max_train_samples if self.train_args.max_train_samples is not None else len(self.dataset["train"])
-        #metrics["train_samples"] = min(max_train_samples, len(self.dataset["train"]))
-        #self.trainer.log_metrics("train", metrics)
-        #self.trainer.save_metrics("train", metrics)
+        metrics = train_result.metrics
+        max_train_samples = self.train_args.max_train_samples if self.train_args.max_train_samples is not None else len(self.dataset["train"])
+        metrics["train_samples"] = min(max_train_samples, len(self.dataset["train"]))
+        self.trainer.log_metrics("train", metrics)
+        self.trainer.save_metrics("train", metrics)
         print("Metrics logged.")
         print("Saving Trainer state...")
         self.trainer.save_state()
         print("Trainer state saved.")
         
     def train_model(self):
-        #train_result = self.trainer.train()
-        self.save_model()#train_result)
+        train_result = self.trainer.train()
+        self.save_model(train_result)
 
 class Evaluate:
     
@@ -231,7 +231,7 @@ if __name__ == "__main__":
 
     label2id = {"entailment": 0, "not_entailment": 1}
     id2label = {0: "entailment", 1: "not_entailment"}
-    model = AutoModelForSequenceClassification.from_pretrained(Config.BASE_MODEL_PATH, label2id=label2id, id2label=id2label, ignore_mismatched_sizes=True)
+    model = AutoModelForSequenceClassification.from_pretrained(Config.BASE_MODEL_PATH, num_labels=2, label2id=label2id, id2label=id2label, ignore_mismatched_sizes=True)
     model.to(Config.DEVICE)
     
     prepare_dataset = PrepareDataset(data, tokenizer)
