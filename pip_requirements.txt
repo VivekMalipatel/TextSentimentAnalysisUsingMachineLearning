@@ -4,7 +4,6 @@ matplotlib
 nltk
 joblib
 torchtext
-wordcloud
 seaborn
 textblob
 transformers

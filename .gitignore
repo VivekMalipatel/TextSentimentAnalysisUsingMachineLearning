@@ -14,3 +14,4 @@ test.py
 1/bert_finetuned/pytorch_model.bin
 1/bert-base-multilingual-cased/
 *.joblib
+/Other_Files
