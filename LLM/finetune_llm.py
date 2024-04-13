@@ -28,16 +28,16 @@ class Config:
     }
 
     # Model parameters
-    DEVICE = 'cuda:5' if torch.cuda.is_available() else torch.device("mps")
+    DEVICE = 'cuda' if torch.cuda.is_available() else torch.device("mps")
     MAX_LEN = 512
-    TRAIN_BATCH_SIZE = 32
+    TRAIN_BATCH_SIZE = 64
     VALID_BATCH_SIZE = 64
-    EPOCHS = 1
+    EPOCHS = 3
     LEARNING_RATE = 2e-5
     GRADIENT_ACCUMULATION_STEPS = 1
     WARMUP_RATIO = 0.06
     WEIGHT_DECAY = 0.01
-    FP16_BOOL = True if torch.cuda.is_available() else False
+    FP16_BOOL = False
 
 class PrepareDataset:
 
@@ -58,12 +58,12 @@ class PrepareDataset:
             ## entailment
             df_step = data[data.label == label].copy(deep=True)
             df_step["hypothesis"] = [hypothesis] * len(df_step)
-            df_step["entailment_label"] = [0] * len(df_step)
+            df_step["labels"] = [0] * len(df_step)
             ## not_entailment
             df_step_not_entail = data[data.label != label].copy(deep=True)
             df_step_not_entail = df_step_not_entail.sample(n=min(len(df_step), len(df_step_not_entail)), random_state=random_seed)
             df_step_not_entail["hypothesis"] = [hypothesis] * len(df_step_not_entail)
-            df_step_not_entail["entailment_label"] = [1] * len(df_step_not_entail)
+            df_step_not_entail["labels"] = [1] * len(df_step_not_entail)
             # append
             df_lst.append(pd.concat([df_step, df_step_not_entail]))
         data = pd.concat(df_lst)
@@ -83,15 +83,15 @@ class PrepareDataset:
         for key, value in hypothesis_labels.items():
             label_lst = [0 if value == hypo else 1 for hypo in hypothesis_lst]
             label_text_label_dic_explode[key] = label_lst
-        data["entailment_label"] = data.label.map(label_text_label_dic_explode)
+        data["labels"] = data.label.map(label_text_label_dic_explode)
         data["hypothesis"] = [hypothesis_lst] * len(data)
         print(f"Original test set size: {len(data)}")
-        data = data.explode(["hypothesis", "entailment_label"])
+        data = data.explode(["hypothesis", "labels"])
         print(f"Test set size for NLI classification: {len(data)}")
         return data.copy(deep=True)
     
     def convert_to_dataset(self, train_dataset, test_dataset):
-        columns_to_keep = ["text", "hypothesis", "entailment_label"]
+        columns_to_keep = ["text", "hypothesis", "labels"]
         return datasets.DatasetDict({"train" : datasets.Dataset.from_pandas(train_dataset[columns_to_keep]),
                                     "test" : datasets.Dataset.from_pandas(test_dataset[columns_to_keep])})
     
@@ -140,7 +140,7 @@ class Train:
             #load_best_model_at_end= True,
             #metric_for_best_model="accuracy",
             evaluation_strategy="epoch",
-            save_strategy="no",
+            save_strategy="epoch",
             save_total_limit = 1,
             report_to="all"
         )
