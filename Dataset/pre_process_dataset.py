@@ -52,7 +52,7 @@ def clean_and_lemmatize(text):
 def main():
     # Load the dataset
     data_path = 'Dataset/Testing_dataset/text_emotion.csv'
-    data_save_path = 'Dataset/Testing_dataset/pre_processed_text.csv'
+    data_save_path = 'Dataset/Testing_dataset/pre_processed_text_emotion.csv'
     data = pd.read_csv(data_path)
     text_column = 'content'
     label_column = 'sentiment'
