@@ -81,7 +81,7 @@ def main(rank, world_size):
     ddp_setup(rank, world_size)
 
     # Load the pre-processed dataset
-    data_path = 'pre_processed_text.csv'
+    data_path = 'Dataset/Training_dataset/pre_processed_text.csv'
     data = pd.read_csv(data_path)
     
     # Extract features and labels
