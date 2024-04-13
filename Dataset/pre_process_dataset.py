@@ -92,7 +92,7 @@ def clean_and_lemmatize(text):
 
 def main():
     # Load the dataset
-    data_path = 'text.csv'
+    data_path = 'Dataset/text.csv'
     data = pd.read_csv(data_path)
 
     # Drop the unnecessary index column
