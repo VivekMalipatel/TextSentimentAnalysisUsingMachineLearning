@@ -28,7 +28,7 @@ class Config:
     }
 
     # Model parameters
-    DEVICE = 'cuda' if torch.cuda.is_available() else torch.device("mps")
+    DEVICE = 'cuda:5' if torch.cuda.is_available() else torch.device("mps")
     MAX_LEN = 512
     TRAIN_BATCH_SIZE = 32
     VALID_BATCH_SIZE = 64
@@ -155,7 +155,9 @@ class Train:
         )
     
     def save_model(self):
+        print("Saving model...")
         self.trainer.save_model(Config.FINETUNED_MODEL_SAVE_PATH)
+        print(f"Model saved at {Config.FINETUNED_MODEL_SAVE_PATH}")
 
     def train_model(self):
         self.trainer.train()
@@ -212,9 +214,11 @@ if __name__ == "__main__":
     print("The overall structure of the prepared dataset:")
     print(dataset)
     print("sample row of the training dataset:")
-    print(dataset['train'][:10])
+    print(dataset['train'][:1])
     print("sample row of the testing dataset:")
-    print(dataset['test'][:10])
+    print(dataset['test'][:1])
 
-    #trainer = Train(model, tokenizer, dataset)
-    #trainer.train_model()
+    print("The model training is starting...")
+    trainer = Train(model, tokenizer, dataset)
+    trainer.train_model()
+    print("Model training is done.")
