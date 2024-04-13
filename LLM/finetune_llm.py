@@ -30,14 +30,14 @@ class Config:
     # Model parameters
     DEVICE = 'cuda' if torch.cuda.is_available() else torch.device("mps")
     MAX_LEN = 512
-    TRAIN_BATCH_SIZE = 8
-    VALID_BATCH_SIZE = 8
-    EPOCHS = 10
+    TRAIN_BATCH_SIZE = 32
+    VALID_BATCH_SIZE = 64
+    EPOCHS = 1
     LEARNING_RATE = 2e-5
     GRADIENT_ACCUMULATION_STEPS = 1
-    WARMUP_RATIO = 0.1
+    WARMUP_RATIO = 0.06
     WEIGHT_DECAY = 0.01
-    FP16_BOOL = True
+    FP16_BOOL = True if torch.cuda.is_available() else False
 
 class PrepareDataset:
 
@@ -124,7 +124,7 @@ class Train:
 
         self.train_args = TrainingArguments(
             output_dir=Config.MODEL_TRAINING_LOGS_PATH,
-            logging_dir=Config.MODEL_TRAINING_LOGS_PATH,
+            logging_dir=f'{Config.MODEL_TRAINING_LOGS_PATH}/logs',
             learning_rate=Config.LEARNING_RATE,
             lr_scheduler_type= "linear",
             group_by_length=False, 
@@ -134,13 +134,14 @@ class Train:
             num_train_epochs=Config.EPOCHS,
             warmup_ratio=Config.WARMUP_RATIO,
             weight_decay=Config.WEIGHT_DECAY,
-            fp16=Config.FP16_BOOL, 
+            fp16=Config.FP16_BOOL,
+            fp16_full_eval=Config.FP16_BOOL,
             seed = Config.SEED_GLOBAL,
-            load_best_model_at_end= True,
-            metric_for_best_model="f1_macro",
+            #load_best_model_at_end= True,
+            #metric_for_best_model="accuracy",
             evaluation_strategy="epoch",
-            save_strategy="epoch",
-            save_total_limit = 2,
+            save_strategy="no",
+            save_total_limit = 1,
             report_to="all"
         )
 
@@ -154,7 +155,7 @@ class Train:
         )
     
     def save_model(self):
-        self.model.save_pretrained(Config.FINETUNED_MODEL_SAVE_PATH)
+        self.trainer.save_model(Config.FINETUNED_MODEL_SAVE_PATH)
 
     def train_model(self):
         self.trainer.train()
