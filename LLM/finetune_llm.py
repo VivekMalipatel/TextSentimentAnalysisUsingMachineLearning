@@ -27,8 +27,16 @@ class Config:
         5 : 'The text portrays a surprise sentiment.',
     }
 
+    def device() :
+        device = "cpu"
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif torch.backends.mps.is_available():
+            device = torch.device("mps")
+        return device
+
     # Model parameters
-    DEVICE = 'cuda' if torch.cuda.is_available() else torch.device("mps")
+    DEVICE = device()
     MAX_LEN = 512
     TRAIN_BATCH_SIZE = 64
     VALID_BATCH_SIZE = 64
@@ -125,6 +133,7 @@ class Train:
         self.train_args = TrainingArguments(
             output_dir=Config.MODEL_TRAINING_LOGS_PATH,
             logging_dir=f'{Config.MODEL_TRAINING_LOGS_PATH}/logs',
+            logging_strategy="epoch",
             learning_rate=Config.LEARNING_RATE,
             lr_scheduler_type= "linear",
             group_by_length=False, 
@@ -137,8 +146,8 @@ class Train:
             fp16=Config.FP16_BOOL,
             fp16_full_eval=Config.FP16_BOOL,
             seed = Config.SEED_GLOBAL,
-            #load_best_model_at_end= True,
-            #metric_for_best_model="accuracy",
+            load_best_model_at_end= True,
+            metric_for_best_model="f1_macro",
             evaluation_strategy="epoch",
             save_strategy="epoch",
             save_total_limit = 1,
@@ -154,14 +163,25 @@ class Train:
             compute_metrics = lambda eval_pred : Evaluate().compute_metrics_nli_binary(eval_pred)
         )
     
-    def save_model(self):
+    def save_model(self, train_result):
         print("Saving model...")
         self.trainer.save_model(Config.FINETUNED_MODEL_SAVE_PATH)
+        torch.save(self.trainer.model, Config.FINETUNED_MODEL_SAVE_PATH)
         print(f"Model saved at {Config.FINETUNED_MODEL_SAVE_PATH}")
-
+        print("Logging metrics...")
+        metrics = train_result.metrics
+        max_train_samples = self.train_args.max_train_samples if self.train_args.max_train_samples is not None else len(self.dataset["train"])
+        metrics["train_samples"] = min(max_train_samples, len(self.dataset["train"]))
+        self.trainer.log_metrics("train", metrics)
+        self.trainer.save_metrics("train", metrics)
+        print("Metrics logged.")
+        print("Saving Trainer state...")
+        self.trainer.save_state()
+        print("Trainer state saved.")
+        
     def train_model(self):
-        self.trainer.train()
-        self.save_model()
+        train_result = self.trainer.train()
+        self.save_model(train_result)
 
 class Evaluate:
     
@@ -204,8 +224,11 @@ class Evaluate:
 if __name__ == "__main__":
 
     data = pd.read_csv(Config.INPUT_DATA_PATH)
-    tokenizer = AutoTokenizer.from_pretrained(Config.BASE_MODEL_PATH, model_max_length = Config.MAX_LEN)
-    model = AutoModelForSequenceClassification.from_pretrained(Config.BASE_MODEL_PATH)
+    tokenizer = AutoTokenizer.from_pretrained(Config.BASE_MODEL_PATH, use_fast=False, model_max_length = Config.MAX_LEN)
+
+    label2id = {"entailment": 0, "not_entailment": 1}
+    id2label = {0: "entailment", 1: "not_entailment"}
+    model = AutoModelForSequenceClassification.from_pretrained(Config.BASE_MODEL_PATH, label2id=label2id, id2label=id2label)
     model.to(Config.DEVICE)
     
     prepare_dataset = PrepareDataset(data, tokenizer)
