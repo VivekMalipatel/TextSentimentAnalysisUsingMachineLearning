@@ -40,7 +40,7 @@ class Config:
     DEVICE = device()
     MAX_LEN = 512
     TRAIN_BATCH_SIZE = 32
-    VALID_BATCH_SIZE = 64
+    VALID_BATCH_SIZE = 128
     EPOCHS = 1
     LEARNING_RATE = 2e-5
     GRADIENT_ACCUMULATION_STEPS = 1
@@ -56,7 +56,7 @@ class PrepareDataset:
         self.train_dataset = None
 
     def fit_hypothesis(self, text):
-        return 'The text is - "' + text + '" - end of text'
+        return 'the text is - "' + text + '" - end of text'
     
     def format_nli_trainset(self, data, hypothesis_labels, random_seed=Config.SEED_GLOBAL):
         print('Formatting NLI trainset...')
@@ -132,7 +132,10 @@ class Train:
         self.tokenizer = tokenizer
 
         self.train_args = TrainingArguments(
+            do_train = True,
+            do_eval = True,
             output_dir=Config.MODEL_TRAINING_LOGS_PATH,
+            overwrite_output_dir=True,
             logging_dir=f'{Config.MODEL_TRAINING_LOGS_PATH}/logs',
             logging_strategy="epoch",
             learning_rate=Config.LEARNING_RATE,
@@ -164,25 +167,24 @@ class Train:
             compute_metrics = lambda eval_pred : Evaluate().compute_metrics_nli_binary(eval_pred)
         )
     
-    def save_model(self, train_result):
+    def save_model(self):# train_result):
         print("Saving model...")
         self.trainer.save_model(Config.FINETUNED_MODEL_SAVE_PATH)
-        torch.save(self.trainer.model, Config.FINETUNED_MODEL_SAVE_PATH)
         print(f"Model saved at {Config.FINETUNED_MODEL_SAVE_PATH}")
         print("Logging metrics...")
-        metrics = train_result.metrics
-        max_train_samples = self.train_args.max_train_samples if self.train_args.max_train_samples is not None else len(self.dataset["train"])
-        metrics["train_samples"] = min(max_train_samples, len(self.dataset["train"]))
-        self.trainer.log_metrics("train", metrics)
-        self.trainer.save_metrics("train", metrics)
+        #metrics = train_result.metrics
+       # max_train_samples = self.train_args.max_train_samples if self.train_args.max_train_samples is not None else len(self.dataset["train"])
+        #metrics["train_samples"] = min(max_train_samples, len(self.dataset["train"]))
+        #self.trainer.log_metrics("train", metrics)
+        #self.trainer.save_metrics("train", metrics)
         print("Metrics logged.")
         print("Saving Trainer state...")
         self.trainer.save_state()
         print("Trainer state saved.")
         
     def train_model(self):
-        train_result = self.trainer.train()
-        self.save_model(train_result)
+        #train_result = self.trainer.train()
+        self.save_model()#train_result)
 
 class Evaluate:
     
@@ -225,7 +227,7 @@ class Evaluate:
 if __name__ == "__main__":
 
     data = pd.read_csv(Config.INPUT_DATA_PATH)
-    tokenizer = AutoTokenizer.from_pretrained(Config.BASE_MODEL_PATH, use_fast=False, model_max_length = Config.MAX_LEN)
+    tokenizer = AutoTokenizer.from_pretrained(Config.BASE_MODEL_PATH, use_fast=True, model_max_length = Config.MAX_LEN)
 
     label2id = {"entailment": 0, "not_entailment": 1}
     id2label = {0: "entailment", 1: "not_entailment"}
@@ -242,7 +244,7 @@ if __name__ == "__main__":
     print("sample row of the testing dataset:")
     print(dataset['test'][:1])
 
-    print("The model training is starting...")
+    print("\nThe model training is starting...")
     trainer = Train(model, tokenizer, dataset)
     trainer.train_model()
     print("Model training is done.")
