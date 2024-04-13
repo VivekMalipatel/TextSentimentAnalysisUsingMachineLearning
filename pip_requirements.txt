@@ -7,3 +7,5 @@ torchtext
 wordcloud
 seaborn
 textblob
+transformers
+torch
