@@ -13,3 +13,4 @@ test.py
 1/bert_finetuned/special_tokens_map.json
 1/bert_finetuned/pytorch_model.bin
 1/bert-base-multilingual-cased/
+*.joblib

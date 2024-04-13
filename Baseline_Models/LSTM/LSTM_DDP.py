@@ -184,8 +184,8 @@ def main(rank, world_size):
 
     if rank == 0:
         print("Training completed.")
-        torch.save(model.module.state_dict(), 'LSTM/LSTM_model.pth')
-        torch.save(my_vocab, 'LSTM/vocab.pth')
+        torch.save(model.module.state_dict(), 'Baseline_Models/LSTM/LSTM_model_files/LSTM_model.pth')
+        torch.save(my_vocab, 'Baseline_Models/LSTM/LSTM_model_files/vocab.pth')
         test_loss, test_accuracy, test_precision, test_recall, test_f1 = evaluate(model, test_loader, criterion, rank)
         print(f'Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}, Test Precision: {test_precision:.4f}, Test Recall: {test_recall:.4f}, Test F1 Score: {test_f1:.4f}')
 

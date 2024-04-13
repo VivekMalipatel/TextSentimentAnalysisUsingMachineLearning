@@ -15,7 +15,7 @@ def main():
     y = data['label']
 
     # Vectorize the text data with unigrams, bigrams, and trigrams
-    vectorizer = TfidfVectorizer(ngram_range=(1, 3))
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_features=30000)
     X_vectorized = vectorizer.fit_transform(X)
 
     # Split the dataset into training and test sets
@@ -31,8 +31,8 @@ def main():
     print(f'Model Accuracy: {accuracy * 100:.2f}%')
 
     # Save the trained model and vectorizer
-    joblib.dump(model, 'Naive_Bayes_model/naive_bayes_model.joblib')
-    joblib.dump(vectorizer, 'Naive_Bayes_model/tfidf_vectorizer.joblib')
+    joblib.dump(model, 'Baseline_Models/Naive_Bayes/NaiveBayes_model_files/naive_bayes_model.joblib')
+    joblib.dump(vectorizer, 'Baseline_Models/Naive_Bayes/NaiveBayes_model_filestfidf_vectorizer.joblib')
 
     print("Model and vectorizer have been saved.")
 

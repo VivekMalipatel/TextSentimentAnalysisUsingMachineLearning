@@ -167,8 +167,8 @@ def main():
         print(f'Epoch {epoch+1}/{num_epochs}, Average Epoch Loss: {average_loss:.4f}')
      
     # Save the model and tokenizer
-    torch.save(model.state_dict(), 'LSTM/LSTM_model.pth')
-    torch.save(my_vocab, 'LSTM/vocab.pth')
+    torch.save(model.state_dict(), 'Baseline_Models/LSTM/LSTM_model_files/LSTM_model.pth')
+    torch.save(my_vocab, 'Baseline_Models/LSTM/LSTM_model_files/vocab.pth')
 
     # Evaluate the model
     print("\n Final model evaluation metrics :")
