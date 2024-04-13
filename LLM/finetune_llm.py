@@ -153,8 +153,7 @@ class Train:
             seed = Config.SEED_GLOBAL,
             load_best_model_at_end= True,
             metric_for_best_model="f1_macro",
-            evaluation_strategy="steps",
-            eval_steps=1000,
+            evaluation_strategy="epoch",
             save_strategy="epoch",
             save_total_limit = 6,
             report_to="all"
