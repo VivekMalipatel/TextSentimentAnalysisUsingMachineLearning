@@ -10,3 +10,4 @@ textblob
 transformers
 torch
 datasets
+accelerate -U

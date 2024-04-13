@@ -149,8 +149,8 @@ class Train:
             model = self.model,
             tokenizer = self.tokenizer,
             args = self.train_args,
-            train_dataset = self.dattaset["train"],
-            eval_dataset = self.dattaset["test"],
+            train_dataset = self.dataset["train"],
+            eval_dataset = self.dataset["test"],
             compute_metrics = lambda eval_pred : Evaluate().compute_metrics_nli_binary(eval_pred)
         )
     
