@@ -33,14 +33,15 @@ class Config:
             device = "cuda"
         elif torch.backends.mps.is_available():
             device = torch.device("mps")
+        print(f"Device chosen for Training: {device}")
         return device
 
     # Model parameters
     DEVICE = device()
     MAX_LEN = 512
-    TRAIN_BATCH_SIZE = 64
+    TRAIN_BATCH_SIZE = 32
     VALID_BATCH_SIZE = 64
-    EPOCHS = 3
+    EPOCHS = 1
     LEARNING_RATE = 2e-5
     GRADIENT_ACCUMULATION_STEPS = 1
     WARMUP_RATIO = 0.06
@@ -228,7 +229,7 @@ if __name__ == "__main__":
 
     label2id = {"entailment": 0, "not_entailment": 1}
     id2label = {0: "entailment", 1: "not_entailment"}
-    model = AutoModelForSequenceClassification.from_pretrained(Config.BASE_MODEL_PATH, label2id=label2id, id2label=id2label)
+    model = AutoModelForSequenceClassification.from_pretrained(Config.BASE_MODEL_PATH, label2id=label2id, id2label=id2label, ignore_mismatched_sizes=True)
     model.to(Config.DEVICE)
     
     prepare_dataset = PrepareDataset(data, tokenizer)

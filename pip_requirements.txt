@@ -10,4 +10,5 @@ textblob
 transformers
 torch
 datasets
-accelerate -U
+accelerate
+SentencePiece
