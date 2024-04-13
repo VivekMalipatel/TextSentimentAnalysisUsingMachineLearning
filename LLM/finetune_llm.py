@@ -11,7 +11,7 @@ class Config:
 
     #Paths
     INPUT_DATA_PATH = 'pre_processed_text.csv'
-    BASE_MODEL_PATH = ''
+    BASE_MODEL_PATH = 'LLM/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7'
     MODEL_TRAINING_LOGS_PATH = 'LLM/LLM_training_logs'
     FINETUNED_MODEL_SAVE_PATH = 'LLM/Finetuned_LLM_model_files'
 
@@ -77,7 +77,7 @@ class PrepareDataset:
         print('Formatting NLI testset...')
         ## explode test dataset for N hypotheses
         hypothesis_lst = [value for key, value in hypothesis_labels.items()]
-        print("Number of hypotheses/classes: ", len(hypothesis_lst))
+        print("Number of hypotheses/classes:", len(hypothesis_lst))
         # label lists with 0 at alphabetical position of their true hypo, 1 for not-true hypos
         label_text_label_dic_explode = {}
         for key, value in hypothesis_labels.items():
@@ -85,10 +85,9 @@ class PrepareDataset:
             label_text_label_dic_explode[key] = label_lst
         data["entailment_label"] = data.label.map(label_text_label_dic_explode)
         data["hypothesis"] = [hypothesis_lst] * len(data)
-        print(data.head(5))
         print(f"Original test set size: {len(data)}")
         data = data.explode(["hypothesis", "entailment_label"])
-        print(f"Test set size for NLI classification: {len(data)}\n")
+        print(f"Test set size for NLI classification: {len(data)}")
         return data.copy(deep=True)
     
     def convert_to_dataset(self, train_dataset, test_dataset):
@@ -101,7 +100,7 @@ class PrepareDataset:
     
     def prepare_dataset(self):
 
-        print('\n Preparing dataset...')
+        print('\nPreparing dataset...')
         print('Fitting hypothesis...')
         self.data['text'] = self.data['text'].progress_apply(self.fit_hypothesis)
         train_dataset = self.data.sample(frac=Config.TRAIN_SIZE, random_state=Config.SEED_GLOBAL).reset_index(drop=True)
@@ -111,7 +110,7 @@ class PrepareDataset:
         train_dataset = self.format_nli_trainset(train_dataset, Config.HYPOTHESIS_LABELS)
         test_dataset = self.format_nli_testset(test_dataset, Config.HYPOTHESIS_LABELS)
         dataset = self.convert_to_dataset(train_dataset, test_dataset)
-        print('Tokenizing dataset...')
+        print('Tokenizing Train and Test datasets...')
         dataset = dataset.map(self.tokenize_function, batched=True)
         print('Dataset preparation done.')
         return dataset
@@ -209,14 +208,12 @@ if __name__ == "__main__":
     prepare_dataset = PrepareDataset(data, tokenizer)
     dataset = prepare_dataset.prepare_dataset()
 
-    print("The overall structure of the prepared dataset:\n")
+    print("The overall structure of the prepared dataset:")
     print(dataset)
+    print("sample row of the training dataset:")
+    print(dataset['train'][:10])
+    print("sample row of the testing dataset:")
+    print(dataset['test'][:10])
 
-    print("\n First 10 rows of train dataset:")
-    print(dataset["train"].head(10))
-
-    print("First 10 rows of test dataset:")
-    print(dataset["test"].head(10))
-
-    trainer = Train(model, tokenizer, dataset)
-    trainer.train_model()
+    #trainer = Train(model, tokenizer, dataset)
+    #trainer.train_model()

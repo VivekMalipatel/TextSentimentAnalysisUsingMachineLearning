@@ -9,3 +9,4 @@ seaborn
 textblob
 transformers
 torch
+datasets
