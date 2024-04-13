@@ -134,6 +134,7 @@ class Train:
         self.train_args = TrainingArguments(
             do_train = True,
             do_eval = True,
+            do_predict=True,
             output_dir=Config.MODEL_TRAINING_LOGS_PATH,
             overwrite_output_dir=True,
             logging_dir=f'{Config.MODEL_TRAINING_LOGS_PATH}/logs',
@@ -152,9 +153,10 @@ class Train:
             seed = Config.SEED_GLOBAL,
             load_best_model_at_end= True,
             metric_for_best_model="f1_macro",
-            evaluation_strategy="epoch",
+            evaluation_strategy="steps",
+            eval_steps=1000,
             save_strategy="epoch",
-            save_total_limit = 1,
+            save_total_limit = 6,
             report_to="all"
         )
 
