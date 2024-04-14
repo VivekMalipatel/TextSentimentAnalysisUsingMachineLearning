@@ -4,9 +4,9 @@ import seaborn as sns
 
 def load_data():
     # Load the pre-processed data
-    data = pd.read_csv('Dataset/Testing_dataset/text_emotion.csv')
-    text_column = 'content'
-    label_column = 'sentiment'
+    data = pd.read_csv('Dataset/Testing_dataset/pre_processed_text_emotion_compressed.csv')
+    text_column = 'text'
+    label_column = 'label'
     return data, text_column, label_column
 
 def plot_label_distribution(data, label_column):
@@ -22,7 +22,7 @@ def plot_label_distribution(data, label_column):
 
 def plot_word_count_distribution(data, text_column):
     # Adding a new column for word count
-    data['word_count'] = data[text_column].apply(lambda x: len(x.split()))
+    data['word_count'] = data[text_column].astype(str).apply(lambda x: len(x.split()))
     
     # Plotting the distribution of word counts
     plt.figure(figsize=(10, 6))
@@ -41,6 +41,8 @@ def main():
     print("Data Overview:")
     print(data.info())
     print(data.describe())
+    print("Unique labels:")
+    print(data[label_column].unique())  
 
     # Plots
     plot_label_distribution(data, label_column)
