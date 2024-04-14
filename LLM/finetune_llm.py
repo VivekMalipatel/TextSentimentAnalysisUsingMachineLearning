@@ -132,16 +132,16 @@ class Train:
         self.tokenizer = tokenizer
 
         self.train_args = TrainingArguments(
-            do_train = True,
-            do_eval = True,
+            do_train=True,
+            do_eval=True,
             do_predict=True,
-            save_safetensors = False,
+            save_safetensors=False,
             output_dir=Config.MODEL_TRAINING_LOGS_PATH,
             overwrite_output_dir=True,
             logging_dir=f'{Config.MODEL_TRAINING_LOGS_PATH}/logs',
             logging_strategy="epoch",
             learning_rate=Config.LEARNING_RATE,
-            lr_scheduler_type= "linear",
+            lr_scheduler_type="linear",
             group_by_length=False, 
             gradient_accumulation_steps=Config.GRADIENT_ACCUMULATION_STEPS,
             per_device_train_batch_size=Config.TRAIN_BATCH_SIZE,
@@ -157,7 +157,9 @@ class Train:
             evaluation_strategy="epoch",
             save_strategy="epoch",
             save_total_limit = 6,
-            report_to="all"
+            report_to="all",
+            #ddp_backend='gloo',
+            #dataloader_num_workers=torch.cuda.device_count()
         )
 
         self.trainer = Trainer(
@@ -173,16 +175,6 @@ class Train:
         print("Saving model...")
         self.trainer.save_model(Config.FINETUNED_MODEL_SAVE_PATH)
         print(f"Model saved at {Config.FINETUNED_MODEL_SAVE_PATH}")
-        print("Logging metrics...")
-        metrics = train_result.metrics
-        max_train_samples = self.train_args.max_train_samples if self.train_args.max_train_samples is not None else len(self.dataset["train"])
-        metrics["train_samples"] = min(max_train_samples, len(self.dataset["train"]))
-        self.trainer.log_metrics("train", metrics)
-        self.trainer.save_metrics("train", metrics)
-        print("Metrics logged.")
-        print("Saving Trainer state...")
-        self.trainer.save_state()
-        print("Trainer state saved.")
         
     def train_model(self):
         train_result = self.trainer.train()

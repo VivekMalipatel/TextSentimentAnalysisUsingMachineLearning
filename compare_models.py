@@ -8,12 +8,12 @@ from torch.nn.utils.rnn import pad_sequence
 from torchtext.vocab import vocab
 from Baseline_Models.LSTM.LSTM import LSTMModel
 from sklearn.metrics import accuracy_score
-from transformers import pipeline
+from transformers import ZeroShotClassificationPipeline, AutoModelForSequenceClassification, AutoTokenizer
 import os
 
 class Config:
 
-    TEST_DATA_PATH = 'Dataset/Testing_dataset/pre_processed_text_emotion_compressed.csv'
+    TEST_DATA_PATH = 'Dataset/Training_dataset/pre_processed_text.csv'
 
     NB_MODEL_PATH = 'Baseline_Models/Naive_Bayes/NaiveBayes_model_files/naive_bayes_model.joblib'
     NB_VECTORIZER_PATH = 'Baseline_Models/Naive_Bayes/NaiveBayes_model_files/tfidf_vectorizer.joblib'
@@ -114,28 +114,30 @@ class LLM:
         def device() :
             device = "cpu"
             if torch.cuda.is_available():
-                device = "cuda"
+                device = "cuda:5"
             elif torch.backends.mps.is_available():
                 device = torch.device("mps")
-            print(f"Device chosen for Training: {device}")
+            print(f"\nDevice chosen for Model loading: {device}")
             return device
 
         self.classifier = None
-        self.candidate_labels = ['joy', 'sadness', 'anger', 'fear', 'love', 'surprise']
+        self.candidate_labels = ['sadness', 'joy', 'love', 'anger', 'fear', 'surprise']
         self.candidate_labels_dict = {label: i for i, label in enumerate(self.candidate_labels)}
         self.device = device()
     
     def load_model(self, model_path):
-        self.classifier = pipeline('zero-shot-classification', model=model_path, device=self.device)
+        model =  AutoModelForSequenceClassification.from_pretrained(model_path)
+        tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True, num_labels=512)
+        self.classifier = ZeroShotClassificationPipeline(model=model, tokenizer=tokenizer, num_worker=8, device=self.device, batch_size=2048, framework='pt')
 
     def main(self, data):
         print("\nLoading the LLM model...")
         self.load_model(Config.LLM_MODEL_PATH)
         print("Making predictions...")
         predictions = self.classifier(data['text'].astype(str).tolist(), self.candidate_labels, multi_label=False)
-        predictions = [self.candidate_labels_dict[prediction['labels']] for prediction in predictions]
+        predictions_converted = [self.candidate_labels_dict[prediction['labels'][0]] for prediction in predictions]
         print("Calculating accuracy...")
-        accuracy = accuracy_score(data['label'], predictions)
+        accuracy = accuracy_score(data['label'].tolist(), predictions_converted)
         print("Accuracy of the LLM model: ", accuracy*100)
         return accuracy
         
