@@ -11,3 +11,4 @@ torch
 datasets
 accelerate
 SentencePiece
+deep_translator
