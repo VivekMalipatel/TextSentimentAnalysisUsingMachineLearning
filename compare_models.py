@@ -58,7 +58,7 @@ class LSTM:
         self.model, self.vocab = None, None
         self.unknown_words_count = 0
         self.total_words_count = 0
-        self.device = 'cuda:5' if torch.cuda.is_available() else torch.device("mps")
+        self.device = 'cuda:4' if torch.cuda.is_available() else torch.device("mps")
 
     def load_model_and_vocab(self, model_path, vocab_path):
         self.vocab = torch.load(vocab_path)
