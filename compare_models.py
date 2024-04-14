@@ -16,7 +16,7 @@ def flush():
 
 class Config:
 
-    TEST_DATA_PATH = 'Dataset/Testing_dataset/pre_processed_text_test_partition.csv'
+    TEST_DATA_PATH = 'Dataset/Testing_dataset/pre_processed_text_test_partition_es_translated.csv'
 
     NB_MODEL_PATH = 'Baseline_Models/Naive_Bayes/NaiveBayes_model_files/naive_bayes_model.joblib'
     NB_VECTORIZER_PATH = 'Baseline_Models/Naive_Bayes/NaiveBayes_model_files/tfidf_vectorizer.joblib'
@@ -39,6 +39,7 @@ class NaiveBayesModel:
     def make_predictions(self, new_data):
         new_data_vectorized = self.vectorizer.transform(new_data)
         predictions = self.model.predict(new_data_vectorized)
+        print(predictions)
         return predictions
     
     def calculate_accuracy(self, predictions, true_labels):
@@ -99,6 +100,7 @@ class LSTM:
                 texts, labels = texts.to(self.device), labels.to(self.device)
                 outputs = self.model(texts, [len(x) for x in texts])
                 predictions = outputs.argmax(dim=1, keepdim=True).squeeze()
+                print(predictions)
                 accuracy = accuracy_score(labels.cpu(), predictions.cpu())
                 total_accuracy += accuracy
         return total_accuracy / len(data_loader)
@@ -140,6 +142,7 @@ class LLM:
         print("Making predictions...")
         predictions = self.classifier(data['text'].astype(str).tolist(), self.candidate_labels, multi_label=False)
         predictions_converted = [self.candidate_labels_dict[prediction['labels'][0]] for prediction in predictions]
+        print(predictions_converted)
         print("Calculating accuracy...")
         accuracy = accuracy_score(data['label'].tolist(), predictions_converted)
         print("Accuracy of the LLM model: ", accuracy*100)
