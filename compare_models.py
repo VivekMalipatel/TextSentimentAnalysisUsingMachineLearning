@@ -1,15 +1,18 @@
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
 import joblib
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from torch.nn.utils.rnn import pad_sequence
-from torchtext.vocab import vocab
 from Baseline_Models.LSTM.LSTM import LSTMModel
 from sklearn.metrics import accuracy_score
 from transformers import ZeroShotClassificationPipeline, AutoModelForSequenceClassification, AutoTokenizer
-import os
+import gc
+from accelerate.utils import release_memory
+
+def flush():
+    gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()
 
 class Config:
 
@@ -105,6 +108,8 @@ class LSTM:
         self.load_model_and_vocab(Config.LSTM_MODEL_PATH, Config.LSTM_VOCAB_PATH)
         accuracy = self.make_predictions(data)
         print('Accuracy of the LSTM model: ', accuracy*100)
+        flush()
+        release_memory(self.model)
         return accuracy
 
 class LLM:
@@ -117,7 +122,6 @@ class LLM:
                 device = "cuda:5"
             elif torch.backends.mps.is_available():
                 device = torch.device("mps")
-            print(f"\nDevice chosen for Model loading: {device}")
             return device
 
         self.classifier = None
@@ -127,8 +131,8 @@ class LLM:
     
     def load_model(self, model_path):
         model =  AutoModelForSequenceClassification.from_pretrained(model_path)
-        tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True, num_labels=512)
-        self.classifier = ZeroShotClassificationPipeline(model=model, tokenizer=tokenizer, num_worker=8, device=self.device, batch_size=2048, framework='pt')
+        tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True, model_max_length=512)
+        self.classifier = ZeroShotClassificationPipeline(model=model, tokenizer=tokenizer, device=self.device, batch_size=512, framework='pt')
 
     def main(self, data):
         print("\nLoading the LLM model...")
@@ -146,21 +150,24 @@ def main():
 
     data = pd.read_csv(Config.TEST_DATA_PATH)
 
-    nb_model = NaiveBayesModel()
-    nb_accuracy = nb_model.main(data)
-    lstm_model = LSTM()
-    lstm_accuracy = lstm_model.main(data)
+    #nb_model = NaiveBayesModel()
+    #nb_accuracy = nb_model.main(data)
+    #lstm_model = LSTM()
+    #lstm_accuracy = lstm_model.main(data)
+
+    
+
     llm_model = LLM()
     llm_accuracy = llm_model.main(data)
 
-    print("\nComparing the models...")
-    print("The Best Model is: ")
-    if nb_accuracy >= lstm_accuracy and nb_accuracy >= llm_accuracy:
-        print("Naive Bayes Model with an accuracy of ", nb_accuracy*100, "%")
-    elif lstm_accuracy >= nb_accuracy and lstm_accuracy >= llm_accuracy:
-        print("LSTM Model with an accuracy of ", lstm_accuracy*100, "%")
-    else:
-        print("LLM Model with an accuracy of ", llm_accuracy*100, "%")
+    #print("\nComparing the models...")
+    #print("The Best Model is: ")
+    #if nb_accuracy >= lstm_accuracy and nb_accuracy >= llm_accuracy:
+    #    print("Naive Bayes Model with an accuracy of ", nb_accuracy*100, "%")
+    #elif lstm_accuracy >= nb_accuracy and lstm_accuracy >= llm_accuracy:
+    #    print("LSTM Model with an accuracy of ", lstm_accuracy*100, "%")
+    #else:
+    #    print("LLM Model with an accuracy of ", llm_accuracy*100, "%")
 
 if __name__ == '__main__':
     main()
