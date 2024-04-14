@@ -16,7 +16,7 @@ def flush():
 
 class Config:
 
-    TEST_DATA_PATH = 'Dataset/Training_dataset/pre_processed_text.csv'
+    TEST_DATA_PATH = 'Dataset/Testing_dataset/pre_processed_text_test_partition.csv'
 
     NB_MODEL_PATH = 'Baseline_Models/Naive_Bayes/NaiveBayes_model_files/naive_bayes_model.joblib'
     NB_VECTORIZER_PATH = 'Baseline_Models/Naive_Bayes/NaiveBayes_model_files/tfidf_vectorizer.joblib'
@@ -150,24 +150,21 @@ def main():
 
     data = pd.read_csv(Config.TEST_DATA_PATH)
 
-    #nb_model = NaiveBayesModel()
-    #nb_accuracy = nb_model.main(data)
-    #lstm_model = LSTM()
-    #lstm_accuracy = lstm_model.main(data)
-
-    
-
+    nb_model = NaiveBayesModel()
+    nb_accuracy = nb_model.main(data)
+    lstm_model = LSTM()
+    lstm_accuracy = lstm_model.main(data)
     llm_model = LLM()
     llm_accuracy = llm_model.main(data)
 
-    #print("\nComparing the models...")
-    #print("The Best Model is: ")
-    #if nb_accuracy >= lstm_accuracy and nb_accuracy >= llm_accuracy:
-    #    print("Naive Bayes Model with an accuracy of ", nb_accuracy*100, "%")
-    #elif lstm_accuracy >= nb_accuracy and lstm_accuracy >= llm_accuracy:
-    #    print("LSTM Model with an accuracy of ", lstm_accuracy*100, "%")
-    #else:
-    #    print("LLM Model with an accuracy of ", llm_accuracy*100, "%")
+    print("\nComparing the models...")
+    print("The Best Model is: ")
+    if nb_accuracy >= lstm_accuracy and nb_accuracy >= llm_accuracy:
+        print("Naive Bayes Model with an accuracy of ", nb_accuracy*100, "%")
+    elif lstm_accuracy >= nb_accuracy and lstm_accuracy >= llm_accuracy:
+        print("LSTM Model with an accuracy of ", lstm_accuracy*100, "%")
+    else:
+        print("LLM Model with an accuracy of ", llm_accuracy*100, "%")
 
 if __name__ == '__main__':
     main()
