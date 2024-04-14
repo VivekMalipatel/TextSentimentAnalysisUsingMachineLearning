@@ -135,6 +135,7 @@ class Train:
             do_train = True,
             do_eval = True,
             do_predict=True,
+            save_safetensors = False,
             output_dir=Config.MODEL_TRAINING_LOGS_PATH,
             overwrite_output_dir=True,
             logging_dir=f'{Config.MODEL_TRAINING_LOGS_PATH}/logs',
