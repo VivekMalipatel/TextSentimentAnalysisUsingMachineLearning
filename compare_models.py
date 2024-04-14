@@ -151,5 +151,14 @@ def main():
     llm_model = LLM()
     llm_accuracy = llm_model.main(data)
 
+    print("\nComparing the models...")
+    print("The Best Model is: ")
+    if nb_accuracy >= lstm_accuracy and nb_accuracy >= llm_accuracy:
+        print("Naive Bayes Model with an accuracy of ", nb_accuracy*100, "%")
+    elif lstm_accuracy >= nb_accuracy and lstm_accuracy >= llm_accuracy:
+        print("LSTM Model with an accuracy of ", lstm_accuracy*100, "%")
+    else:
+        print("LLM Model with an accuracy of ", llm_accuracy*100, "%")
+
 if __name__ == '__main__':
     main()
