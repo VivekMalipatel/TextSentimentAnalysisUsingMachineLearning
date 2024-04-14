@@ -132,7 +132,7 @@ class LLM:
     def load_model(self, model_path):
         model =  AutoModelForSequenceClassification.from_pretrained(model_path)
         tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True, model_max_length=512)
-        self.classifier = ZeroShotClassificationPipeline(model=model, tokenizer=tokenizer, device=self.device, batch_size=512, framework='pt')
+        self.classifier = ZeroShotClassificationPipeline(model=model, tokenizer=tokenizer, device=self.device, batch_size=1024, framework='pt')
 
     def main(self, data):
         print("\nLoading the LLM model...")
