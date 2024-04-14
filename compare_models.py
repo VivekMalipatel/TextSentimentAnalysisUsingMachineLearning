@@ -21,7 +21,7 @@ class Config:
     LSTM_MODEL_PATH = 'Baseline_Models/LSTM/LSTM_model_files/LSTM_model.pth'
     LSTM_VOCAB_PATH = 'Baseline_Models/LSTM/LSTM_model_files/vocab.pth'
 
-    LLM_MODEL_PATH = ''
+    LLM_MODEL_PATH = 'LLM/Finetuned_LLM_model_files'
 
 class NaiveBayesModel:
 
@@ -110,12 +110,23 @@ class LSTM:
 class LLM:
 
     def __init__(self):
+
+        def device() :
+            device = "cpu"
+            if torch.cuda.is_available():
+                device = "cuda"
+            elif torch.backends.mps.is_available():
+                device = torch.device("mps")
+            print(f"Device chosen for Training: {device}")
+            return device
+
         self.classifier = None
         self.candidate_labels = ['joy', 'sadness', 'anger', 'fear', 'love', 'surprise']
         self.candidate_labels_dict = {label: i for i, label in enumerate(self.candidate_labels)}
+        self.device = device()
     
     def load_model(self, model_path):
-        self.classifier = pipeline('zero-shot-classification', model=model_path)
+        self.classifier = pipeline('zero-shot-classification', model=model_path, device=self.device)
 
     def main(self, data):
         print("\nLoading the LLM model...")
