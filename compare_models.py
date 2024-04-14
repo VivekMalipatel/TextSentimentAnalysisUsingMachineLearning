@@ -24,7 +24,7 @@ class Config:
     LSTM_MODEL_PATH = 'Baseline_Models/LSTM/LSTM_model_files/LSTM_model.pth'
     LSTM_VOCAB_PATH = 'Baseline_Models/LSTM/LSTM_model_files/vocab.pth'
 
-    LLM_MODEL_PATH = 'LLM/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7'
+    LLM_MODEL_PATH = 'LLM/Finetuned_LLM_model_files'
 
 class NaiveBayesModel:
 
