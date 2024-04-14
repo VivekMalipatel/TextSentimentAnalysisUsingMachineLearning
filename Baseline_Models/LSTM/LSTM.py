@@ -71,7 +71,6 @@ def evaluate(model, loader, criterion, device):
             total_f1 += f1
     return total_loss / num_batches, total_accuracy / num_batches, total_precision / num_batches, total_recall / num_batches, total_f1 / num_batches
 
-
 def main():
     # Load the pre-processed dataset
     data_path = 'Dataset/Training_dataset/pre_processed_text.csv'

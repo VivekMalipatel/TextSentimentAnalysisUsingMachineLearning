@@ -15,3 +15,4 @@ test.py
 1/bert-base-multilingual-cased/
 *.joblib
 /Other_Files
+*.pyc
