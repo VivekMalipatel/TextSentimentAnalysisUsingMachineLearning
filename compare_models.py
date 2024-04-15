@@ -16,7 +16,7 @@ def flush():
 
 class Config:
 
-    TEST_DATA_PATH = 'Dataset/Testing_dataset/pre_processed_text_test_partition.csv'
+    TEST_DATA_PATH = 'Dataset/Testing_dataset/pre_processed_text_test_partition_es_translated.csv'
 
     NB_MODEL_PATH = 'Baseline_Models/Naive_Bayes/NaiveBayes_model_files/naive_bayes_model.joblib'
     NB_VECTORIZER_PATH = 'Baseline_Models/Naive_Bayes/NaiveBayes_model_files/tfidf_vectorizer.joblib'
