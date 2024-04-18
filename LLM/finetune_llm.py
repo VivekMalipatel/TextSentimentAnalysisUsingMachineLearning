@@ -16,7 +16,7 @@ class Config:
     FINETUNED_MODEL_SAVE_PATH = 'LLM/Finetuned_LLM_model_files'
 
     SEED_GLOBAL = 42
-    TRAIN_SIZE = 0.9
+    TRAIN_SIZE = 0.8
 
     HYPOTHESIS_LABELS = {
         0 : 'The text portrays a sadness sentiment.',
